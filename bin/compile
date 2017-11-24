@@ -1,0 +1,42 @@
+#!/bin/sh
+
+set -e
+
+mkdir -p "$1" "$2"
+
+_build_dir=$1
+_cache_dir=$2
+_env_dir=$3
+_buildpack_dir=$(cd "$(dirname $0)/.." && pwd)
+
+env_blacklist_regex='(PATH|GEM_PATH|GEM_HOME|GIT_DIR|SSH_KEY)'
+
+if [ -d "$_env_dir" ]; then
+  for _e in $(ls $_env_dir); do
+    echo "$_e" | grep -qvE "$env_blacklist_regex" &&
+      export "$_e=$(cat $_env_dir/$_e)"
+  done
+fi
+
+_supercronic_version=${SUPERCRONIC_VERSION:="v0.1.4"}
+_supercronic_bin=${SUPERCRONIC:-"supercronic-linux-amd64"}
+_supercronic_url=${SUPERCRONIC_URL:-"https://github.com/aptible/supercronic/releases/download/$_supercronic_version/$_supercronic_bin"}
+_supercronic_sha1sum=${SUPERCRONIC_SHA1SUM:-"3a631023f9f9dd155cfa0d1bb517a063d375055a"}
+
+_cached_bin_path="$_cache_dir/$_supercronic_bin"
+
+title() {
+  echo ""
+  echo "-----> $1"
+}
+
+if [ -e "$_cached_bin_path" ] &&
+   echo "$_supercronic_sha1sum  $_cached_bin_path" | sha1sum -s -c - ; then
+  title "Supercronic release $_supercronic_version was already cached. Skipping download phase..."
+else
+  title "Downloading supercronic version $_supercronic_version from $_supercronic_url"
+  wget "$_supercronic_url" -O "$_cached_bin_path" --quiet
+fi
+
+cp $_cached_bin_path $_build_dir/bin/supercronic
+chmod 755 $_build_dir/bin/supercronic

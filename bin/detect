@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "aptible/supercronic"
+
+exit 0
